@@ -1,0 +1,198 @@
+var aliens = [];
+var bullets = [];
+var ship;
+var dir = 1; // alien velocity.
+var shipspeed = 0;  // ship velocity.
+var shipsd = 4;
+var baseline = 450;
+var states = {
+    gaming:1,
+    lost:0,
+    win:3,
+};
+var yaoguaisudu = 0.2;
+var shipDir;
+var Direct = {
+    up:1,
+    down:2,
+    left:3,
+    right:4,
+};
+var dijibo = 1;
+var boshu = 3;
+var shengyuboshu = boshu;
+var bullets = [];
+var current_state = states.gaming;
+var mark = 0;
+var slider;
+var bonusHeight=0;
+var offs = 60;
+function createAliens(){
+    for (j = 0; j<5;j++){
+        aliens.push(new Alien(j*80+80,offs,30));
+    }
+}
+
+
+
+
+function setup() {
+    createCanvas(500,500);
+    slider = createSlider(0.1,0.8,0.2,0.05)
+    slider.style('width', '80px');
+    reset();
+}
+function reset(){
+    aliens = [];
+    bullets = [];
+    current_state = states.gaming;
+    dijibo=1;
+    mark = 0;
+    ship = new Ship();
+    createAliens();
+
+}
+function drawbaseline(){
+    stroke("green");
+    strokeWeight(3);
+    line(0,baseline,width,baseline);
+}
+function drawText(val,x,y,col,size){
+    noStroke();
+    textSize(size);
+    textAlign(CENTER);
+    fill(col);
+    text(val,x,y);
+}
+function drawBonusHeight(){
+    if (current_state===states.gaming){
+        mark+=(baseline-bonusHeight)*2;
+        current_state=states.win;
+    }
+    else if (current_state===states.win){
+        stroke('tomato');
+        strokeWeight(5);
+        line(100,bonusHeight,100,baseline);
+        line(90,bonusHeight,110,bonusHeight);
+        drawText("Bonus Height "+bonusHeight+" m",width/2,bonusHeight+(baseline-bonusHeight)/2,'violet',20);
+    }
+}
+function draw() {
+    background("GreenYellow");
+    drawbaseline();
+    drawText("your defense line", 120, baseline+20,'tomato',20);
+    drawText("Marks",width-100,50,'violet',20);
+    drawText(mark,width-100,70,'violet',20);
+
+    if (current_state === states.lost){
+        for (i=0;i<aliens.length;i++){
+            aliens[i].show();
+        }
+        drawText('lost', width/2,height/2,"red",80);
+        ship.show();
+        drawText('reset by pressing Backspace', width/2,height/2+150,"red",20);
+    }else if(aliens.length>=1){
+        ship.show();
+        ship.move(shipspeed,shipDir);
+        moveDirection();  
+        bulletsBehaviour();
+        if (aliens.length===1){bonusHeight = floor(aliens[0].y); }
+    }else{
+        drawBonusHeight();        
+        ship.show();
+        drawText('win', width/2,height/2,'violet',80); 
+        drawText('reset by pressing Backspace', width/2+75,height/2+150,"blue",20);
+    }
+}
+function bulletsBehaviour(){
+    for (var i=bullets.length-1;i>=0;i--){        
+        for (var j=0;j<aliens.length;j++){
+            var collide = judgeCollision(bullets[i],aliens[j]);
+            if (collide===true){
+                bullets.splice(i,1);
+                break;
+            }
+        }        
+    }
+    for (var i = 0;i<bullets.length;i++){
+        bullets[i].show();       
+        bullets[i].move();
+        if (checkBoundary(bullets[i])){bullets.splice(i,1);}
+    }
+}
+
+function moveDirection(){
+    yaoguaisudu = slider.value();
+    for (i=0;i<aliens.length;i++){
+        aliens[i].y+=yaoguaisudu;
+        if (aliens[i].y> baseline - aliens[i].r){
+            current_state = states.lost;      
+        }else if(aliens[i].r<10){
+            aliens.splice(i,1);
+            mark += 200*yaoguaisudu;
+        }
+    }
+    for (i=0;i<aliens.length;i++){    
+        if (aliens[i].x>width-aliens[i].r||aliens[i].x<aliens[i].r){
+            dir = -dir;
+            yaoguaisudu+=0.1;
+        }else if(shengyuboshu>0&&aliens[i].y>floor((baseline-offs)/(boshu+1)*dijibo+offs)){
+            
+            console.log("boshu"+boshu);
+            console.log("dijibo"+dijibo);
+            console.log(floor((baseline-offs)/(boshu+1)*dijibo+offs));
+            createAliens();
+            console.log("add");
+            shengyuboshu--;
+            dijibo+=1;
+        }
+        aliens[i].show();       
+        aliens[i].move(dir);
+    }
+}
+
+
+function keyPressed() {
+    if (keyCode === LEFT_ARROW) {
+        shipspeed = shipsd;
+        shipDir = Direct.left;
+    } else if (keyCode === RIGHT_ARROW) {
+        shipspeed = shipsd;
+        shipDir = Direct.right;
+    } else if (keyCode === UP_ARROW) {
+        shipspeed = shipsd;
+        shipDir = Direct.up;
+    } else if (keyCode === DOWN_ARROW) {
+        shipspeed = shipsd;
+        shipDir = Direct.down;
+    }else if (keyCode === 32) {
+        bullets.push(new Bullet(ship.x,ship.y)); 
+        mark-=3;
+    }else if (keyCode ===8&& (current_state===states.lost||current_state===states.win)){
+        console.log("escape");        
+        clear();
+        reset();
+    }
+
+}
+
+
+function keyReleased() {
+    if (keyCode != 32) {
+        shipspeed = 0;
+    }
+}
+
+function judgeCollision(a,b){
+    var d = dist(a.x,a.y,b.x,b.y);
+    if (d<a.r/2+b.r/2){
+        b.r-=10;
+        return true;
+    }
+}
+
+function checkBoundary(a){
+    if (a.y<0){
+        return true;
+    }
+}
